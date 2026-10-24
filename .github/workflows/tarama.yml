@@ -32,8 +32,8 @@ jobs:
           pip install playwright pypdf openpyxl
           python -m playwright install --with-deps chromium
 
-      - name: LinkedIn taraması
-        run: python linkedin_is_tara.py
+      - name: İş ilanı taraması (LinkedIn + kariyer.net + Arkitera)
+        run: python is_ilani_tara.py
         continue-on-error: true
 
       - name: Araştırma görevlisi taraması (YÖK + ilan.gov.tr)
