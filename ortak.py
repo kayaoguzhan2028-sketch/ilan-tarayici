@@ -5,7 +5,14 @@ from pathlib import Path
 
 # GitHub Actions'ta mı çalışıyoruz? Orada çıktılar repodaki "sonuclar" klasörüne gider.
 ACTIONS = bool(os.environ.get("GITHUB_ACTIONS"))
-CIKTI = Path(__file__).resolve().parent / ("sonuclar" if ACTIONS else "")
+# Bilgisayarda çalışınca çıktılar buraya gider (yoksa scriptin kendi klasörüne)
+YEREL_KLASOR = Path.home() / "Desktop" / "Yüksek Lisans ALL" / "phyton scriptim"
+if ACTIONS:
+    CIKTI = Path(__file__).resolve().parent / "sonuclar"
+elif YEREL_KLASOR.is_dir():
+    CIKTI = YEREL_KLASOR
+else:
+    CIKTI = Path(__file__).resolve().parent
 CIKTI.mkdir(exist_ok=True)
 EXCEL_YERI = "Drive > İlan Taramaları"
 # Actions → Drive: Google Apps Script "posta kutusu" adresi ve anahtarı (GitHub Secrets)
