@@ -26,9 +26,9 @@ KARIYER_SAYFA = 5                # kariyer.net'te kaç sayfa (mimar, mimar-2 ...
 ARKITERA_MAX_DETAY = 40          # şehri listede yazmayan Arkitera ilanlarından en fazla kaçı açılsın
 # -----------------------------------------
 
-# kariyer.net yurt dışı sunucu IP'lerini (GitHub) bot koruması ile engelliyor:
+# kariyer.net ve Arkitera yurt dışı sunucu IP'lerini (GitHub) Cloudflare bot koruması ile engelliyor:
 # GitHub'da atlanır, bilgisayardan (.bat) çalıştırınca taranır.
-KARIYER_BULUTTA = False
+TR_SITELERI_BULUTTA = False
 
 KLASOR = ortak.CIKTI
 DEBUG = KLASOR / "debug"
@@ -47,7 +47,7 @@ RE_YER = re.compile(r"ankara|izmir|çankaya|yenimahalle|keçiören|etimesgut|sin
                     r"|polatlı|kahramankazan|bornova|karşıyaka|konak|buca|çiğli|bayraklı|gaziemir|karabağlar"
                     r"|menemen|torbalı|urla|çeşme|foça|narlıdere|balçova|kemalpaşa|aliağa|menderes|seferihisar|güzelbahçe")
 RE_DUVAR = re.compile(r"authwall|sign in|oturum aç|giriş yap")
-RE_ENGEL = re.compile(r"captcha|cloudflare|access denied|erişim engellendi|robot olmadığınızı|request blocked")
+RE_ENGEL = re.compile(r"captcha|cloudflare|access denied|erişim engellendi|robot olmadığınızı|request blocked|güvenlik doğrulaması")
 
 # Bir bağlantının etrafındaki "kart" metnini toplayan JS (site yapısından bağımsız)
 JS_KARTLAR = """(desen) => {
@@ -176,6 +176,9 @@ def arkitera(page, ilanlar, uyarilar):
         uyarilar.append(f"Arkitera açılamadı ({str(e).splitlines()[0][:120]})")
         return
     debug_kaydet(page, "arkitera")
+    if RE_ENGEL.search(norm(page.inner_text("body")[:3000])) or "bir dakika lütfen" in norm(page.title()):
+        uyarilar.append("Arkitera: bot koruması (Cloudflare) — bilgisayardan çalıştır.")
+        return
     kartlar = page.evaluate(JS_KARTLAR, r"arkitera\.com/kariyer/[^/?#]+/?$")
     sehirsiz = []
     for href, a_metin, kart in kartlar:
@@ -219,7 +222,7 @@ def main():
     with sync_playwright() as p:
         tarayici = p.chromium.launch(headless=not GORUNUR)
         page = tarayici.new_context(locale="tr-TR").new_page()
-        kaynaklar = [linkedin, arkitera] if (ortak.ACTIONS and not KARIYER_BULUTTA) else [linkedin, kariyer, arkitera]
+        kaynaklar = [linkedin] if (ortak.ACTIONS and not TR_SITELERI_BULUTTA) else [linkedin, kariyer, arkitera]
         for kaynak in kaynaklar:
             try:
                 kaynak(page, ilanlar, uyarilar)
@@ -248,6 +251,8 @@ def main():
 
     bugun = datetime.date.today().isoformat()
     sayilar = ", ".join(f"{k}: {sum(1 for i in uygun if i['kaynak'] == k)}" for k in ("LinkedIn", "kariyer.net", "Arkitera"))
+    if ortak.ACTIONS and not TR_SITELERI_BULUTTA:
+        sayilar += " (kariyer.net ve Arkitera sadece bilgisayardan taranır)"
     sayfa = f"""<!doctype html><meta charset="utf-8"><title>Mimar iş ilanları {bugun}</title>
 <style>body{{font-family:Segoe UI,Arial;margin:24px;color:#222}}table{{border-collapse:collapse;width:100%}}
 td,th{{border:1px solid #ddd;padding:6px;text-align:left}}tr.yeni{{background:#fff6d6}}th{{background:#f2f2f2}}
