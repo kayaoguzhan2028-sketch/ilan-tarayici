@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Mimarlık Araştırma Görevlisi ilan tarayıcı
-Kaynaklar: YÖK Akademik İlan Sistemi + ilan.gov.tr (Akademik Personel)
+Kaynak: ilan.gov.tr — Kamu-Akademik Personel (üniversiteler arş. gör. ilanlarını burada yayımlamak zorunda)
 
 Ne yapar:
   1. Kaynak sayfalarını açar, ilan bağlantılarını toplar.
@@ -29,11 +29,6 @@ MAX_PDF = 40         # kaynak başına okunacak en fazla PDF
 SAYFA_LIMIT = 3      # liste sayfasında "sonraki" ile en fazla kaç sayfa ilerlensin
 
 KAYNAKLAR = {
-    "YÖK Akademik İlan": {
-        "baslangic": ["https://ilan.yok.gov.tr/",
-                      "https://www.ilan.yok.gov.tr/ilanlar/akademik"],
-        "alan": "yok.gov.tr",
-    },
     "ilan.gov.tr": {
         # Kamu-Akademik Personel kategorisi, sayfa sayfa (currentPage=0,1,2...)
         "baslangic": [f"https://www.ilan.gov.tr/ilan/kategori/8/kamu-akademik-personel?ats=5&currentPage={i}"
@@ -53,7 +48,11 @@ def norm(s):
     return (s or "").replace("İ", "i").replace("I", "ı").lower()
 
 
-RE_MIMAR = re.compile(r"mimar")
+# "Mühendislik-Mimarlık Fakültesi" gibi fakülte adları yanlış eşleşme yapmasın diye
+# sadece mimarlık BÖLÜMÜ / alanı ifadeleri sayılır
+RE_MIMAR = re.compile(r"mimarlık\s*(bölüm|anabilim|ana bilim|abd|alanında|alanı|lisans|programı|mezunu)"
+                      r"|mimari\s*tasarım|mimarlık tarihi|bina bilgisi|yapı bilgisi|restorasyon"
+                      r"|kentsel tasarım|şehir ve bölge planlama")
 RE_ARSGOR = re.compile(r"ara[sş]t[ıi]rma\s+g[öo]revlisi|ar[sş]\.\s*g[öo]r")
 RE_AKADEMIK = re.compile(r"üniversite|universite|öğretim|ogretim|araştırma|arastirma|akademik|fakülte|fakulte|kadro")
 RE_HARIC = re.compile(r"giriş|iletişim|hakkında|kvkk|çerez|gizlilik|sss|yardım|mevzuat|duyurular$")
@@ -86,13 +85,12 @@ def govde(page):
 
 
 def kesitler(metin, n=3):
-    satirlar = [s.strip() for s in metin.splitlines() if s.strip()]
+    duz = re.sub(r"\s+", " ", metin)
     out = []
-    for i, s in enumerate(satirlar):
-        if RE_MIMAR.search(norm(s)):
-            out.append(" | ".join(satirlar[max(0, i - 1):i + 2])[:400])
-            if len(out) >= n:
-                break
+    for m in RE_MIMAR.finditer(norm(duz)):
+        out.append(duz[max(0, m.start() - 120):m.end() + 160].strip())
+        if len(out) >= n:
+            break
     return out
 
 
@@ -168,7 +166,7 @@ def tara(context, ad, ayar, ozet, bulgular):
             yukle(page, href)
             durum["acilan"] += 1
             metin = govde(page)
-            n = norm(metin)
+            n = re.sub(r"\s+", " ", norm(metin))
             mimar, arsgor = bool(RE_MIMAR.search(n)), bool(RE_ARSGOR.search(n))
             if mimar and arsgor:
                 bulgular.append({"kaynak": ad, "baslik": page.title() or baslik, "link": href,
@@ -184,7 +182,7 @@ def tara(context, ad, ayar, ozet, bulgular):
         try:
             metin = pdf_metni(context, href)
             durum["pdf"] += 1
-            n = norm(metin)
+            n = re.sub(r"\s+", " ", norm(metin))
             if RE_MIMAR.search(n) and RE_ARSGOR.search(n):
                 bulgular.append({"kaynak": ad, "baslik": baslik, "link": href,
                                  "son": son_basvuru(metin), "kesit": kesitler(metin), "tur": "PDF"})

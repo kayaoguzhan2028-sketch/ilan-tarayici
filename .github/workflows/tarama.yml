@@ -36,7 +36,7 @@ jobs:
         run: python is_ilani_tara.py
         continue-on-error: true
 
-      - name: Araştırma görevlisi taraması (YÖK + ilan.gov.tr)
+      - name: Akademik ilan taraması (ilan.gov.tr)
         run: python ars_gor_tara.py
         continue-on-error: true
 
