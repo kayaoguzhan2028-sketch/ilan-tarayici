@@ -22,6 +22,9 @@ DRIVE_ANAHTAR = os.environ.get("DRIVE_ANAHTAR", "")
 # Telefona bildirim: ntfy uygulamasında bu konuya abone ol (hesap/şifre gerekmez).
 # Public repoda konu adı görünmesin: GitHub Secrets > NTFY_KONU
 NTFY_KONU = os.environ.get("NTFY_KONU", "")
+_konu_dosyasi = Path(__file__).resolve().parent / "ntfy_konu.txt"   # sadece bilgisayardaki kopyada var
+if not NTFY_KONU and _konu_dosyasi.exists():
+    NTFY_KONU = _konu_dosyasi.read_text(encoding="utf-8").strip()
 DRIVE_ALT_KLASOR = "İlan Taramaları"
 
 
