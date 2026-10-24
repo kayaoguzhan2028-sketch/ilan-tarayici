@@ -1,0 +1,47 @@
+name: Ilan taramasi
+
+on:
+  schedule:
+    - cron: "17 7 * * 1"   # Her pazartesi 10:17 (Türkiye saati)
+  workflow_dispatch:        # Telefondaki GitHub uygulamasından "Run workflow" ile elle başlatma
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tarama
+  cancel-in-progress: false
+
+jobs:
+  tara:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      NTFY_KONU: ${{ secrets.NTFY_KONU }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Paketleri kur
+        run: |
+          pip install playwright pypdf openpyxl
+          python -m playwright install --with-deps chromium
+
+      - name: LinkedIn taraması
+        run: python linkedin_is_tara.py
+        continue-on-error: true
+
+      - name: Araştırma görevlisi taraması (YÖK + ilan.gov.tr)
+        run: python ars_gor_tara.py
+        continue-on-error: true
+
+      - name: Sonuçları repoya kaydet
+        run: |
+          git config user.name "ilan-bot"
+          git config user.email "ilan-bot@users.noreply.github.com"
+          git add sonuclar
+          git commit -m "Tarama $(date +%F)" || echo "Yeni değişiklik yok"
+          git push
