@@ -26,7 +26,12 @@ KARIYER_SAYFA = 5                # kariyer.net'te kaç sayfa (mimar, mimar-2 ...
 ARKITERA_MAX_DETAY = 40          # şehri listede yazmayan Arkitera ilanlarından en fazla kaçı açılsın
 # -----------------------------------------
 
+# kariyer.net yurt dışı sunucu IP'lerini (GitHub) bot koruması ile engelliyor:
+# GitHub'da atlanır, bilgisayardan (.bat) çalıştırınca taranır.
+KARIYER_BULUTTA = False
+
 KLASOR = ortak.CIKTI
+DEBUG = KLASOR / "debug"
 GORULEN = KLASOR / "gorulen_isilani.json"
 GORULEN_ESKI = KLASOR / "gorulen_linkedin.json"
 
@@ -71,6 +76,15 @@ def yer_bul(metin):
 
 def satirlar(metin):
     return [s.strip() for s in (metin or "").splitlines() if s.strip()]
+
+
+def debug_kaydet(page, ad):
+    try:
+        DEBUG.mkdir(exist_ok=True)
+        (DEBUG / f"{ad}.html").write_text(page.content(), encoding="utf-8")
+        page.screenshot(path=str(DEBUG / f"{ad}.png"), full_page=True)
+    except Exception:
+        pass
 
 
 def yukle(page, url):
@@ -131,6 +145,8 @@ def kariyer(page, ilanlar, uyarilar):
         except Exception as e:
             uyarilar.append(f"kariyer.net s.{s}: açılamadı ({str(e).splitlines()[0][:120]})")
             break
+        if s == 1:
+            debug_kaydet(page, "kariyer_net")
         if RE_ENGEL.search(norm(page.inner_text("body")[:3000])):
             uyarilar.append(f"kariyer.net s.{s}: bot koruması (GORUNUR=True ile dene)")
             break
@@ -159,6 +175,7 @@ def arkitera(page, ilanlar, uyarilar):
     except Exception as e:
         uyarilar.append(f"Arkitera açılamadı ({str(e).splitlines()[0][:120]})")
         return
+    debug_kaydet(page, "arkitera")
     kartlar = page.evaluate(JS_KARTLAR, r"arkitera\.com/kariyer/[^/?#]+/?$")
     sehirsiz = []
     for href, a_metin, kart in kartlar:
@@ -202,7 +219,8 @@ def main():
     with sync_playwright() as p:
         tarayici = p.chromium.launch(headless=not GORUNUR)
         page = tarayici.new_context(locale="tr-TR").new_page()
-        for kaynak in (linkedin, kariyer, arkitera):
+        kaynaklar = [linkedin, arkitera] if (ortak.ACTIONS and not KARIYER_BULUTTA) else [linkedin, kariyer, arkitera]
+        for kaynak in kaynaklar:
             try:
                 kaynak(page, ilanlar, uyarilar)
             except Exception as e:
