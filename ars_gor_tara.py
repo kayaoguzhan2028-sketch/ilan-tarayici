@@ -24,7 +24,7 @@ except ImportError:
 # ---------------- AYARLAR ----------------
 GORUNUR = False      # True: tarayıcı penceresi açık çalışır (site engellerse dene)
 BEKLEME = 2.0        # sayfalar arası bekleme (saniye)
-MAX_DETAY = 80       # kaynak başına açılacak en fazla ilan sayfası
+MAX_DETAY = 120      # kaynak başına açılacak en fazla ilan sayfası
 MAX_PDF = 40         # kaynak başına okunacak en fazla PDF
 SAYFA_LIMIT = 3      # liste sayfasında "sonraki" ile en fazla kaç sayfa ilerlensin
 
@@ -35,7 +35,10 @@ KAYNAKLAR = {
         "alan": "yok.gov.tr",
     },
     "ilan.gov.tr": {
-        "baslangic": ["https://www.ilan.gov.tr/ilan/kategori/9/akademik-personel-alimlari"],
+        # Kamu-Akademik Personel kategorisi, sayfa sayfa (currentPage=0,1,2...)
+        "baslangic": [f"https://www.ilan.gov.tr/ilan/kategori/8/kamu-akademik-personel?ats=5&currentPage={i}"
+                      for i in range(8)],
+        "sonraki_takip": False,
         "alan": "ilan.gov.tr",
     },
 }
@@ -144,11 +147,12 @@ def tara(context, ad, ayar, ozet, bulgular):
                 lst = linkler(page)
                 ekle_linkler(lst)
                 # sonraki sayfa: "Sonraki/›/»" ya da sıradaki sayfa numarası ("2", "3"...)
-                url = next((h for m, h in lst if alan in h and h != page.url and
-                            (RE_SONRAKI.match(norm(m)) or m.strip() == str(adim + 2))), None)
+                url = None if not ayar.get("sonraki_takip", True) else next(
+                    (h for m, h in lst if alan in h and h != page.url and
+                     (RE_SONRAKI.match(norm(m)) or m.strip() == str(adim + 2))), None)
             except Exception as e:
                 durum["hata"] += 1
-                durum["uyari"].append(f"Açılamadı: {url} ({type(e).__name__})")
+                durum["uyari"].append(f"Açılamadı: {url} ({str(e).splitlines()[0][:160]})")
                 url = None
             adim += 1
             time.sleep(BEKLEME)
@@ -244,7 +248,7 @@ def main():
     excel = ortak.excel_kaydet(
         f"arsgor_{ortak.bugun()}.xlsx", ["Yeni", "Kaynak", "İlan", "Son başvuru", "Mimar geçen yer", "Link"],
         [["YENİ" if b["yeni"] else "", b["kaynak"], b["baslik"], b["son"], " | ".join(b["kesit"]), b["link"]]
-         for b in bulgular], link_sutunu=5, yeni_sutunu=0)
+         for b in bulgular], link_sutunu=5, yeni_sutunu=0, son_adi="00 SON - Arastirma Gorevlisi.xlsx")
     uyarilar = [u for d in ozet.values() for u in d["uyari"]]
     if yeni:
         ozet_metin = "\n".join(f"• {b['baslik'][:70]} (son: {b['son'] or '?'})" for b in yeni[:6])

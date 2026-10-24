@@ -7,7 +7,10 @@ from pathlib import Path
 ACTIONS = bool(os.environ.get("GITHUB_ACTIONS"))
 CIKTI = Path(__file__).resolve().parent / ("sonuclar" if ACTIONS else "")
 CIKTI.mkdir(exist_ok=True)
-EXCEL_YERI = "GitHub > ilan-tarayici > sonuclar" if ACTIONS else "Drive > İlan Taramaları"
+EXCEL_YERI = "Drive > İlan Taramaları"
+# Actions → Drive: Google Apps Script "posta kutusu" adresi ve anahtarı (GitHub Secrets)
+DRIVE_WEBHOOK = os.environ.get("DRIVE_WEBHOOK", "")
+DRIVE_ANAHTAR = os.environ.get("DRIVE_ANAHTAR", "")
 
 # Telefona bildirim: ntfy uygulamasında bu konuya abone ol (hesap/şifre gerekmez).
 # Public repoda konu adı görünmesin: GitHub Secrets > NTFY_KONU
@@ -32,7 +35,7 @@ def drive_klasoru():
     return None
 
 
-def excel_kaydet(dosya_adi, basliklar, satirlar, link_sutunu=None, yeni_sutunu=None):
+def excel_kaydet(dosya_adi, basliklar, satirlar, link_sutunu=None, yeni_sutunu=None, son_adi=None):
     """satirlar: list of list. Hem yerel klasöre hem Google Drive'a kaydeder. Kaydedilen yolları döner."""
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill
@@ -73,7 +76,32 @@ def excel_kaydet(dosya_adi, basliklar, satirlar, link_sutunu=None, yeni_sutunu=N
         wb.save(k / dosya_adi)
         (k / csv_adi).write_text(tampon.getvalue(), encoding="utf-8-sig")
         kaydedilen.append(str(k / dosya_adi))
+    if ACTIONS:
+        if drive_yukle(CIKTI / dosya_adi):
+            kaydedilen.append(f"Drive/{DRIVE_ALT_KLASOR}/{dosya_adi}")
+        if son_adi and drive_yukle(CIKTI / dosya_adi, ad=son_adi):
+            kaydedilen.append(f"Drive/{DRIVE_ALT_KLASOR}/{son_adi}")
     return kaydedilen
+
+
+def drive_yukle(yol, ad=None):
+    """GitHub Actions'tan Google Drive'daki 'İlan Taramaları' klasörüne dosya gönderir."""
+    if not (DRIVE_WEBHOOK and DRIVE_ANAHTAR):
+        print("⚠ DRIVE_WEBHOOK/DRIVE_ANAHTAR tanımlı değil, Drive'a yüklenmedi.")
+        return False
+    import base64, json
+    govde = json.dumps({"anahtar": DRIVE_ANAHTAR, "ad": ad or yol.name,
+                        "tur": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        "veri": base64.b64encode(yol.read_bytes()).decode()}).encode()
+    try:
+        req = urllib.request.Request(DRIVE_WEBHOOK, data=govde, headers={"Content-Type": "application/json"})
+        cevap = urllib.request.urlopen(req, timeout=60).read().decode(errors="ignore")
+        if "ok" in cevap:
+            return True
+        print("⚠ Drive cevabı:", cevap[:200])
+    except Exception as e:
+        print("⚠ Drive'a yüklenemedi:", e)
+    return False
 
 
 def bildir(baslik, mesaj, oncelik="default"):

@@ -35,6 +35,10 @@ def norm(s):
 # Yazılım/bilişim "mimar"larını ele
 RE_IT = re.compile(r"yazılım|software|solution|çözüm|cloud|bulut|data|veri|sistem|system|enterprise|kurumsal mimar"
                    r"|\bit\b|network|devops|security|güvenlik|database|platform|salesforce|sap|integration|entegrasyon")
+RE_UNVAN = re.compile(r"mimar|architect|\bbim\b|restorasyon")
+RE_YER = re.compile(r"ankara|izmir|çankaya|yenimahalle|keçiören|etimesgut|sincan|altındağ|mamak|gölbaşı|pursaklar"
+                    r"|polatlı|kahramankazan|bornova|karşıyaka|konak|buca|çiğli|bayraklı|gaziemir|karabağlar"
+                    r"|menemen|torbalı|urla|çeşme|foça|narlıdere|balçova|kemalpaşa|aliağa|menderes|seferihisar|güzelbahçe")
 RE_DUVAR = re.compile(r"authwall|sign in|oturum aç|giriş yap")
 
 
@@ -82,9 +86,11 @@ def main():
                         tarih = zaman_el.get_attribute("datetime") if zaman_el else ""
                         if not link or link in ilanlar:
                             continue
-                        it = bool(RE_IT.search(norm(baslik)))
+                        nb, ny = norm(baslik), norm(yer)
+                        it = bool(RE_IT.search(nb))
+                        kapsam_disi = (not RE_UNVAN.search(nb)) or (not RE_YER.search(ny))
                         ilanlar[link] = {"baslik": baslik, "firma": firma, "yer": yer,
-                                         "tarih": tarih, "link": link, "it": it}
+                                         "tarih": tarih, "link": link, "it": it or kapsam_disi}
                     print(f"→ {anahtar} / {konum} / sayfa {s+1}: toplam {len(ilanlar)} ilan")
                     time.sleep(BEKLEME)
         tarayici.close()
@@ -113,7 +119,7 @@ details{{margin-top:20px}}</style>
 <p>{len(bina)} ilan ({sum(i['yeni'] for i in bina)} yeni). Yazılım/bilişim "mimar" ilanları ayrıca listelendi.</p>
 {''.join(f'<p>⚠ {html.escape(u)}</p>' for u in uyarilar)}
 <table><tr><th></th><th>Pozisyon</th><th>Firma</th><th>Konum</th><th>Tarih</th></tr>{''.join(map(satir, bina))}</table>
-<details><summary>Elenen yazılım/bilişim ilanları ({len(elenen)}) — yanlış elenen var mı kontrol et</summary>
+<details><summary>Elenenler: yazılım/bilişim, Ankara-İzmir dışı ya da başlığında "mimar" geçmeyenler ({len(elenen)}) — yanlış elenen var mı kontrol et</summary>
 <table>{''.join(map(satir, elenen))}</table></details>"""
     yol = KLASOR / f"rapor_linkedin_{bugun}.html"
     yol.write_text(sayfa, encoding="utf-8")
@@ -122,7 +128,7 @@ details{{margin-top:20px}}</style>
     excel = ortak.excel_kaydet(
         f"linkedin_{bugun}.xlsx", ["Yeni", "Pozisyon", "Firma", "Konum", "Tarih", "Link"],
         [["YENİ" if i["yeni"] else "", i["baslik"], i["firma"], i["yer"], i["tarih"], i["link"]] for i in bina],
-        link_sutunu=5, yeni_sutunu=0)
+        link_sutunu=5, yeni_sutunu=0, son_adi="00 SON - LinkedIn.xlsx")
     if yeni:
         ozet = "\n".join(f"• {i['baslik']} — {i['firma']} ({i['yer'].split(',')[0]})" for i in yeni[:8])
         ortak.bildir(f"LinkedIn: {len(yeni)} yeni mimar ilani", ozet + "\n\nExcel: " + ortak.EXCEL_YERI)

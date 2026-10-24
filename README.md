@@ -7,7 +7,9 @@ Haftalık mimar ilan taraması (GitHub Actions). Bilgisayarın açık olmasına 
 
 **Ne zaman çalışır:** Her pazartesi 10:17. Elle başlatmak için: GitHub uygulaması → bu repo → Actions → *Ilan taramasi* → **Run workflow**.
 
-**Sonuçlar:** `sonuclar/` klasörü — `.xlsx` (telefonda açılır), `.html` rapor, `.csv`. Yeni ilanlar sarı.
+**Sonuçlar:** Google Drive → *İlan Taramaları* klasörü (`00 SON - ...xlsx` her zaman en güncel liste). Repoda da `sonuclar/` klasöründe kopyası durur. Yeni ilanlar sarı.
+
+**Drive bağlantısı:** `drive_posta_kutusu.gs` (Google Apps Script) + Secrets `DRIVE_WEBHOOK`, `DRIVE_ANAHTAR`.
 
 **Bildirim:** Telefonda ntfy uygulaması; konu adı repo Secrets'ında (`NTFY_KONU`).
 

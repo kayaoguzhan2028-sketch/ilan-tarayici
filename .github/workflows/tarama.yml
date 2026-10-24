@@ -18,6 +18,8 @@ jobs:
     timeout-minutes: 45
     env:
       NTFY_KONU: ${{ secrets.NTFY_KONU }}
+      DRIVE_WEBHOOK: ${{ secrets.DRIVE_WEBHOOK }}
+      DRIVE_ANAHTAR: ${{ secrets.DRIVE_ANAHTAR }}
     steps:
       - uses: actions/checkout@v4
 
