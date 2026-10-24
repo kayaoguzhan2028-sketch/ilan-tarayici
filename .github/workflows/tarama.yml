@@ -2,8 +2,15 @@ name: Ilan taramasi
 
 on:
   schedule:
-    - cron: "17 7 * * 1"   # Her pazartesi 10:17 (Türkiye saati)
-  workflow_dispatch:        # Telefondaki GitHub uygulamasından "Run workflow" ile elle başlatma
+    - cron: "23 6 * * *"    # İş ilanları: her gün 09:23 (Türkiye saati)
+    - cron: "17 7 * * 1"    # Akademik ilanlar: her pazartesi 10:17 (Türkiye saati)
+  workflow_dispatch:         # Telefondan "Run workflow" ile elle başlatma
+    inputs:
+      hangisi:
+        description: "Hangi tarama?"
+        type: choice
+        options: [ikisi, is, akademik]
+        default: ikisi
 
 permissions:
   contents: write
@@ -20,6 +27,9 @@ jobs:
       NTFY_KONU: ${{ secrets.NTFY_KONU }}
       DRIVE_WEBHOOK: ${{ secrets.DRIVE_WEBHOOK }}
       DRIVE_ANAHTAR: ${{ secrets.DRIVE_ANAHTAR }}
+      # Zamanlanmış çalıştırmada hangi tarama: günlük cron → iş, pazartesi cron → akademik
+      IS: ${{ github.event.schedule == '23 6 * * *' || (github.event_name == 'workflow_dispatch' && inputs.hangisi != 'akademik') }}
+      AKADEMIK: ${{ github.event.schedule == '17 7 * * 1' || (github.event_name == 'workflow_dispatch' && inputs.hangisi != 'is') }}
     steps:
       - uses: actions/checkout@v4
 
@@ -33,10 +43,12 @@ jobs:
           python -m playwright install --with-deps chromium
 
       - name: İş ilanı taraması (LinkedIn + kariyer.net + Arkitera)
+        if: env.IS == 'true'
         run: python is_ilani_tara.py
         continue-on-error: true
 
       - name: Akademik ilan taraması (ilan.gov.tr)
+        if: env.AKADEMIK == 'true'
         run: python ars_gor_tara.py
         continue-on-error: true
 
@@ -46,4 +58,5 @@ jobs:
           git config user.email "ilan-bot@users.noreply.github.com"
           git add sonuclar
           git commit -m "Tarama $(date +%F)" || echo "Yeni değişiklik yok"
+          git pull --rebase origin main || true
           git push

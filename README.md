@@ -5,7 +5,7 @@ Haftalık mimar ilan taraması (GitHub Actions). Bilgisayarın açık olmasına 
 - **İş ilanları:** LinkedIn (giriş yapmadan, son 7 gün) + kariyer.net + Arkitera — Ankara + İzmir.
 - **Akademik:** ilan.gov.tr Kamu-Akademik Personel — mimarlık bölümü geçen arş. gör. ilanları.
 
-**Ne zaman çalışır:** Her pazartesi 10:17. Elle başlatmak için: GitHub uygulaması → bu repo → Actions → *Ilan taramasi* → **Run workflow**.
+**Ne zaman çalışır:** İş ilanları her gün 09:23, akademik ilanlar her pazartesi 10:17. Elle başlatmak için: GitHub uygulaması → bu repo → Actions → *Ilan taramasi* → **Run workflow**.
 
 **Sonuçlar:** Google Drive → *İlan Taramaları* klasörü (`00 SON - ...xlsx` her zaman en güncel liste). Repoda da `sonuclar/` klasöründe kopyası durur. Yeni ilanlar sarı.
 
